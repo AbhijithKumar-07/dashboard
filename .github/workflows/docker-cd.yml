@@ -1,0 +1,98 @@
+name: Docker CD (Dashboard)
+
+on:
+  workflow_run:
+    workflows: ["Docker CI"]
+    types: [completed]
+  workflow_dispatch: {}
+
+concurrency:
+  group: "docker-cd-dashboard-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy Dashboard
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate secrets
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USERNAME: ${{ secrets.VPS_USERNAME }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+        run: |
+          set -Eeuo pipefail
+          [ -n "$VPS_HOST" ] || { echo "::error::Missing VPS_HOST"; exit 1; }
+          [ -n "$VPS_USERNAME" ] || { echo "::error::Missing VPS_USERNAME"; exit 1; }
+          [ -n "$VPS_SSH_KEY" ] || { echo "::error::Missing VPS_SSH_KEY"; exit 1; }
+          [ -n "$DOCKER_HUB_USERNAME" ] || { echo "::error::Missing DOCKER_HUB_USERNAME"; exit 1; }
+          echo "Secrets validated ✅"
+
+      - name: Prepare VPS
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          script_stop: true
+          script: |
+            set -Eeuo pipefail
+            STACK_DIR="/opt/app/stacks/dashboard"
+            mkdir -p "$STACK_DIR"
+
+            # Install Docker & Compose plugin if missing
+            if ! command -v docker >/dev/null; then
+              curl -fsSL https://get.docker.com | sh
+              sudo usermod -aG docker "$USER" || true
+              sudo systemctl enable --now docker || true
+            fi
+
+            docker --version
+            docker compose version
+            echo "✅ VPS prepared"
+
+      - name: Upload docker-compose.yml to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          source: "./docker-compose.yml"
+          target: "/opt/app/stacks/dashboard/"
+
+      - name: Deploy dashboard stack
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          script_stop: true
+          debug: true
+          script: |
+            set -Eeuo pipefail
+            STACK_DIR="/opt/app/stacks/dashboard"
+            COMPOSE="$STACK_DIR/docker-compose.yml"
+            IMAGE="${{ secrets.DOCKER_HUB_USERNAME }}/dashboard:latest"
+
+            echo "Starting deployment from $COMPOSE ..."
+
+            # Pull latest image
+            docker compose -p dashboard -f "$COMPOSE" pull || docker pull "$IMAGE"
+
+            # Bring up stack
+            docker compose -p dashboard -f "$COMPOSE" up -d --remove-orphans
+
+            # Validate Nginx
+            docker exec dashboard nginx -t || { echo "::error::Nginx config invalid"; exit 1; }
+
+            echo "✅ Dashboard deployed successfully"

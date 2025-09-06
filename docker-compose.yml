@@ -1,0 +1,20 @@
+services:
+  dashboard:
+    container_name: dashboard
+    image: nitheesh2005/dashboard:latest
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M  # only works with swarm
+    networks:
+      - app-net
+    # Only mount host conf if it exists and contains a valid SPA nginx config
+    # volumes:
+    #   - /opt/app/nginx/conf.d:/etc/nginx/conf.d:ro
+
+networks:
+  app-net:
+    driver: bridge

@@ -1,5 +1,5 @@
 # ---------- Build Stage ----------
-FROM node:18 AS builder   # Use Debian-based Node (not Alpine)
+FROM node:18 AS builder
 
 # Set working directory
 WORKDIR /app
@@ -29,4 +29,5 @@ EXPOSE 80
 
 # Start Nginx in foreground
 CMD ["nginx", "-g", "daemon off;"]
+
 

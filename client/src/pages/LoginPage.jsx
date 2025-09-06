@@ -1,20 +1,11 @@
 
 // File: src/pages/LoginPage.jsx
-<<<<<<< HEAD
 import React, { useState, useEffect } from "react";
 import { Box, Input, Button, Heading } from "@chakra-ui/react";
 import { useRole } from "../context/RoleContext";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../auth";
 import { signInWithEmailAndPassword, onIdTokenChanged } from "firebase/auth";
-=======
-import React, { useState, useEffect } from 'react';
-import { Box, Input, Button, Heading } from '@chakra-ui/react';
-import { useRole } from '../context/RoleContext';
-import { useNavigate } from 'react-router-dom';
-import { auth } from '../auth'; 
-import { signInWithEmailAndPassword } from 'firebase/auth';
->>>>>>> 8b34ae03b9348da0154b1d8c111774b125ef6b7c
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -24,7 +15,6 @@ const LoginPage = () => {
 
   // Redirect if already logged in
   useEffect(() => {
-<<<<<<< HEAD
     if (token) navigate("/bookings");
   }, [token, navigate]);
 
@@ -56,32 +46,6 @@ const LoginPage = () => {
       alert(err.message);
     }
   };
-=======
-    console.log('Token changed:', token); 
-    if (token) navigate('/bookings');
-  }, [token, navigate]);
-
-  // const handleLogin = () => {
-  //   if (email === 'admin@demo.com' && password === 'admin') {
-  //     login('demo-token', 'admin');
-  //   } else {
-  //     alert('Demo Login: admin@demo.com / admin');
-  //   }
-  // };
-
-  const handleLogin = async () => {
-  try {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
-
-    const idToken = await user.getIdToken(); // ✅ real JWT
-    login(idToken, "admin"); 
-  } catch (err) {
-    console.error("Login failed:", err.message);
-    alert(err.message);
-  }
-};
->>>>>>> 8b34ae03b9348da0154b1d8c111774b125ef6b7c
 
   return (
     <Box
